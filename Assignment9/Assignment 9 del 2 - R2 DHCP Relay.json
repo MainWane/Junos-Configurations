@@ -1,0 +1,168 @@
+## File: Ass18_R2_Part2_dhcp.json
+## R2 will relay DHCP traffic to the DHCP service on R1
+## Extended DHCP configuration
+## By Per Dahlstroem
+version 12.1X47-D15.4;
+system {
+    host-name SRXA-4;
+    /* User: root Password: Rootpass */
+    root-authentication {
+        encrypted-password "$1$xH9xJoL6$MFOUYnZr4.Qj2NM24XInz/";
+    }
+    services {
+        ssh;
+    }
+}
+interfaces {
+    ge-0/0/1 {
+        unit 0 {
+            family inet {
+                address 192.168.12.1/24;
+            }
+        }
+    }
+    ge-0/0/2 {
+        unit 0 {
+            family inet {
+                address 192.168.13.1/24;
+            }
+        }
+    }
+    ge-0/0/5 {
+        unit 0 {
+            family inet {
+                address 10.56.16.88/22;
+            }       
+        }
+    }
+    ge-0/0/4 {
+        unit 0 {
+            family inet {
+                address 10.10.10.12/24;
+            }       
+        }
+    }
+}
+forwarding-options {
+    helpers {
+        bootp { /* Incoming BOOTP/DHCP request forwarding configuration */
+            server 10.10.10.11;
+            interface {
+                ge-0/0/1;
+                ge-0/0/2;
+            }
+        }
+    }   
+}
+routing-options {
+    static {
+        route 192.168.10.0/24 next-hop 10.10.10.11;
+        route 192.168.11.0/24 next-hop 10.10.10.11;
+	route 0.0.0.0/0 next-hop 10.56.16.1;
+    }
+}
+security {
+    nat {
+        /* NAT changes the source address of egress IP packets */
+        source {
+            rule-set trust-to-untrust {
+                from zone trust;
+                to zone untrust;
+                rule rule-any-to-any {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 0.0.0.0/0;
+                    }
+                    then {
+                        source-nat {
+                        /* Use egress interface source IP address */
+                            interface;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    policies {
+        from-zone trust to-zone trust {
+            policy default-permit {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                }
+            }
+        }
+	from-zone untrust to-zone trust {
+            policy default-permit {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    deny;
+                }
+            }
+        }
+	from-zone trust to-zone untrust {
+            policy default-permit {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                }
+            }
+        }
+    }
+    zones {
+        security-zone trust {
+            interfaces {
+                ge-0/0/4.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+                            ssh;
+                        }
+                    }
+                }
+                ge-0/0/1.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+                            ssh;
+                            dhcp; /* Open up access to DHCP service */
+                        }
+                    }
+                }
+                ge-0/0/2.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+                            ssh;
+                            dhcp; /* Open up access to DHCP service */
+                        }
+                    }
+                }
+            }
+	}
+	security-zone untrust {
+            interfaces {
+                ge-0/0/5.0 {
+                    host-inbound-traffic {
+                        system-services {
+                           ping;
+                           ssh;
+                        }
+                    }
+		}
+	    }
+        }
+    }
+}

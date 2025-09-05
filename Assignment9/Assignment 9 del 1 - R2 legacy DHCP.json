@@ -1,0 +1,148 @@
+## Router provides DHCP on ge-0/0/1 and ge-0/0/2
+## Legacy DHCP configuration
+/* By Per Dahlstroem */
+version 12.1X47-D15.4;
+system {
+    host-name R2;
+    /* User: root Password: Rootpass */
+    root-authentication {
+        encrypted-password "$1$xH9xJoL6$MFOUYnZr4.Qj2NM24XInz/";
+    }
+    services {
+        ssh;
+        dhcp {
+            /* Net3 */
+            pool 192.168.12.0/24 {
+                address-range low 192.168.12.15 high 192.168.12.20;
+                name-server 8.8.8.8;
+                router 192.168.12.1;
+                default-lease-time 600; /* seconds. 60 for test! */
+            }
+            /* Net4 */
+            pool 192.168.13.0/24 {
+                address-range low 192.168.13.22 high 192.168.13.32;
+                name-server 8.8.8.8;
+                router 192.168.13.1;
+                default-lease-time 600; /* seconds. 60 for test! */
+            }
+        }
+    }
+}
+interfaces {
+    ge-0/0/1 {
+        unit 0 {
+            family inet {
+                address 192.168.12.1/24;
+            }
+        }
+    }
+    ge-0/0/2 {
+        unit 0 {
+            family inet {
+                address 192.168.13.1/24;
+            }
+        }
+    }
+	ge-0/0/4 {
+        unit 0 {
+            family inet {
+                address 10.10.10.12/30;
+            }
+        }
+    }
+	ge-0/0/5 {
+        unit 0 {
+            family inet {
+                address 10.56.16.88/22
+            }
+        }
+    }
+}
+routing-options {
+    static {
+        route 192.168.10.0/24 next-hop 10.10.10.11;
+        route 192.168.11.0/24 next-hop 10.10.10.11;
+	route 0.0.0.0/0 next-hop 10.56.16.88;
+    }
+}
+security {
+    nat {
+        /* NAT changes the source address of egress IP packets */
+        source {
+            rule-set trust-to-untrust {
+                from zone trust;
+                to zone untrust;
+                rule rule-any-to-any {
+                    match {
+                        source-address 0.0.0.0/0;
+                        destination-address 0.0.0.0/0;
+                    }
+                    then {
+                        source-nat {
+                        /* Use egress interface source IP address */
+                            interface;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    policies {
+        from-zone trust to-zone trust {
+            policy default-permit {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                }
+            }
+        }
+    }
+    zones {
+        security-zone trust {
+            interfaces {
+                ge-0/0/4.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+                            ssh;
+			    traceroute;
+                        }
+                    }
+                }
+				ge-0/0/5.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+                            ssh;
+			    traceroute;
+                        }
+                    }
+                }
+                ge-0/0/1.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+                            ssh;
+                            dhcp; /* Open for access to DHCP server */
+			    traceroute;
+                        }
+                    }
+                }
+                ge-0/0/2.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+                            ssh;
+                            dhcp; /* Open for access to DHCP server */
+			    traceroute;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
