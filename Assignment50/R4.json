@@ -1,0 +1,100 @@
+## Assignment 50 OSPF routing protocol
+version 12.1X47-D15.4;
+system {
+    host-name R4;
+    root-authentication {
+        encrypted-password "$1$xH9xJoL6$MFOUYnZr4.Qj2NM24XInz/";
+    }
+}
+interfaces {
+    ge-0/0/2 {
+        unit 0 {
+            family inet {
+                address 10.10.11.2/28;   # PtP
+            }
+        }
+    }
+    ge-0/0/3 {
+        unit 0 {
+            family inet {
+                address 10.10.10.2/28;   # Broadcast segment
+            }
+        }
+    }
+    lo0 {
+        unit 0 {
+            family inet {
+                address 192.168.100.2/32;
+            }
+        }
+    }
+}
+protocols {
+    ospf {
+        area 0.0.0.0 {
+            interface lo0;
+            interface ge-0/0/3.0 {
+                priority 0;             # Lower → DROther
+                # default interface-type broadcast
+            }
+            interface ge-0/0/2.0 {
+				interface-type p2p;
+            }
+        }
+    }
+}
+security {
+    policies {
+        from-zone R4_trust to-zone R4_trust {
+            policy default-permit {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                }
+            }
+        }
+    }
+    zones {
+        security-zone R4_trust {
+            interfaces {
+                lo0.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+							traceroute;
+                        }
+                        protocols {
+                            ospf;
+                        }
+                    }
+                }
+                ge-0/0/2.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+							traceroute;
+                        }
+                        protocols {
+                            ospf;
+                        }
+                    }
+                }
+                ge-0/0/3.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+							traceroute;
+                        }
+                        protocols {
+                            ospf;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

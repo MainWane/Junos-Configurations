@@ -1,0 +1,104 @@
+## Assignment 50 OSPF routing protocol
+/* By Per Dahlstroem. */
+version 12.1X47-D15.4;
+system {
+    host-name R2;
+    /* User: root Password: Rootpass */
+    root-authentication {
+        encrypted-password "$1$xH9xJoL6$MFOUYnZr4.Qj2NM24XInz/";
+    }
+}
+interfaces {
+    ge-0/0/1 {
+        unit 0 {
+            family inet {
+                /* Lan5 - to other routers */
+                address 10.10.12.2/28;
+            }
+        }
+    }
+    ge-0/0/2 {
+        unit 0 {
+            family inet {
+                /* Lan10 - to other network */
+                address 10.10.10.1/28;
+            }
+        }
+    }
+    lo0 {
+        unit 0 {
+            family inet {
+                address 192.168.100.5/32;  /* Unique Router ID */
+            }
+        }
+    }
+}
+protocols {
+    ospf {
+        area 0.0.0.0 {
+            interface lo0.0;
+            interface ge-0/0/1.0 {
+            }
+            interface ge-0/0/2.0 {
+            }
+        }
+    }
+}
+routing-options {
+    router-id 192.168.100.5;           /* Explicit Router ID */
+}
+security {
+    policies {
+        from-zone R2_trust to-zone R2_trust {
+            policy default-permit {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    permit;
+                }
+            }
+        }
+    }
+    zones {
+        security-zone R2_trust {
+            interfaces {
+                lo0.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+							traceroute;
+                        }
+                        protocols {
+                            ospf;
+                        }
+                    }
+                }
+                ge-0/0/1.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+							traceroute;
+                        }
+                        protocols {
+                            ospf;
+                        }
+                    }
+                }
+                ge-0/0/2.0 {
+                    host-inbound-traffic {
+                        system-services {
+                            ping;
+							traceroute;
+                        }
+                        protocols {
+                            ospf;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
